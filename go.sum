@@ -1,0 +1,4 @@
+github.com/DanielSvub/anytype v0.0.0-20240315175453-8e126bb3ce8f h1:qLmydOiqxZ2xqJA6RbJ5AvjV5yxtoD4bfUCWKmz9G0A=
+github.com/DanielSvub/anytype v0.0.0-20240315175453-8e126bb3ce8f/go.mod h1:jvs77Yxd8t+NRQtDqsy72CyFAhIvDCl3Uco9aodPPyQ=
+github.com/neo4j/neo4j-go-driver/v5 v5.18.0 h1:3dmYsCYt/Fc/bPeSyGRGGfn/T6h06/OmHm72OFQKa3c=
+github.com/neo4j/neo4j-go-driver/v5 v5.18.0/go.mod h1:Vff8OwT7QpLm7L2yYr85XNWe9Rbqlbeb9asNXJTHO4k=
