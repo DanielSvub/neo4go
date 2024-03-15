@@ -12,17 +12,6 @@ import (
 	"github.com/neo4j/neo4j-go-driver/v5/neo4j/dbtype"
 )
 
-type object = anytype.Object
-type list = anytype.List
-
-var (
-	Object     = anytype.NewObject
-	ObjectFrom = anytype.NewObjectFrom
-	List       = anytype.NewList
-	ListOf     = anytype.NewListOf
-	ListFrom   = anytype.NewListFrom
-)
-
 /*
 Interface for a connection to a database.
 
@@ -31,7 +20,7 @@ Extends:
 */
 type Connection interface {
 	io.Closer
-	Query(query string, params object) (list, error)
+	Query(query string, params anytype.Object) (anytype.List, error)
 	NewCollection(entity string) (Collection, error)
 }
 
@@ -93,7 +82,7 @@ Returns:
   - list of the query results,
   - error if any occurred.
 */
-func (ego *connection) Query(query string, params object) (list, error) {
+func (ego *connection) Query(query string, params anytype.Object) (anytype.List, error) {
 
 	var paramDict map[string]any
 	if params != nil {
@@ -103,20 +92,20 @@ func (ego *connection) Query(query string, params object) (list, error) {
 	query = strings.TrimSpace(query)
 
 	result, err := ego.session.Run(ego.ctx, query, paramDict)
-	output := List()
+	output := anytype.NewList()
 	if err != nil {
 		return output, err
 	}
 
 	for result.Next(ego.ctx) {
 		record := result.Record()
-		item := Object()
+		item := anytype.NewObject()
 		for _, key := range record.Keys {
 			value, ok := record.Get(key)
 			if ok {
 				switch val := value.(type) {
 				case dbtype.Node:
-					item.Set(key, Object(
+					item.Set(key, anytype.NewObject(
 						"identity", val.GetId(),
 						"elementId", val.GetElementId(),
 						"labels", val.Labels,
@@ -147,9 +136,9 @@ type node struct {
 	*anytype.MapObject
 	col      *collection
 	id       string
-	added    list
-	modified list
-	deleted  list
+	added    anytype.List
+	modified anytype.List
+	deleted  anytype.List
 }
 
 /*
@@ -168,9 +157,9 @@ func (ego *collection) newNode(id string, obj anytype.Object) *node {
 		MapObject: obj.(*anytype.MapObject),
 		col:       ego,
 		id:        id,
-		added:     List(),
-		modified:  List(),
-		deleted:   List(),
+		added:     anytype.NewList(),
+		modified:  anytype.NewList(),
+		deleted:   anytype.NewList(),
 	}
 }
 
@@ -204,7 +193,7 @@ Parameters:
 Returns:
   - updated object (promoted field).
 */
-func (ego *node) Set(values ...any) object {
+func (ego *node) Set(values ...any) anytype.Object {
 	if len(values)%2 == 0 {
 		for i := 0; i < len(values); i += 2 {
 			key, ok := values[i].(string)
@@ -235,7 +224,7 @@ Parameters:
 Returns:
   - updated object (promoted field).
 */
-func (ego *node) Unset(keys ...string) object {
+func (ego *node) Unset(keys ...string) anytype.Object {
 	for _, key := range keys {
 		if ego.added.Contains(key) {
 			ego.added.Delete(ego.added.IndexOf(key))
@@ -255,7 +244,7 @@ func (ego *node) Unset(keys ...string) object {
 Refuses to delete all fields in the node and panics.
 Overrides the method of the promoted field.
 */
-func (ego *node) Clear() object {
+func (ego *node) Clear() anytype.Object {
 	panic("Cannot clear a Neo4j node.")
 }
 
@@ -311,8 +300,8 @@ Extends:
   - anytype.List.
 */
 type Collection interface {
-	list
-	Commit() list
+	anytype.List
+	Commit() anytype.List
 }
 
 /*
@@ -326,9 +315,9 @@ type collection struct {
 	*anytype.SliceList
 	conn     *connection
 	label    string
-	added    list // List of nodes
-	modified list // List of nodes
-	deleted  list // List of IDs
+	added    anytype.List // List of nodes
+	modified anytype.List // List of nodes
+	deleted  anytype.List // List of IDs
 }
 
 /*
@@ -350,12 +339,12 @@ func (ego *connection) NewCollection(entity string) (Collection, error) {
 	col := &collection{
 		conn:     ego,
 		label:    entity,
-		added:    List(),
-		modified: List(),
-		deleted:  List(),
+		added:    anytype.NewList(),
+		modified: anytype.NewList(),
+		deleted:  anytype.NewList(),
 	}
 
-	col.SliceList = result.MapObjects(func(x object) any {
+	col.SliceList = result.MapObjects(func(x anytype.Object) any {
 		return col.newNode(x.GetObject("n").GetString("elementId"),
 			x.GetObject("n").GetObject("properties").(*anytype.MapObject))
 	}).(*anytype.SliceList)
@@ -374,9 +363,9 @@ Parameters:
 Returns:
   - updated list (promoted field).
 */
-func (ego *collection) Add(values ...any) list {
+func (ego *collection) Add(values ...any) anytype.List {
 	for _, value := range values {
-		_, ok := value.(object)
+		_, ok := value.(anytype.Object)
 		if !ok {
 			panic("Only object can be added to the collection.")
 		}
@@ -398,8 +387,8 @@ Parameters:
 Returns:
   - updated list (promoted field).
 */
-func (ego *collection) Insert(index int, value any) list {
-	_, ok := value.(object)
+func (ego *collection) Insert(index int, value any) anytype.List {
+	_, ok := value.(anytype.Object)
 	if !ok {
 		panic("Only object can be inserted to the collection.")
 	}
@@ -418,7 +407,7 @@ Parameters:
 Returns:
   - updated list (promoted field).
 */
-func (ego *collection) Replace(index int, value any) list {
+func (ego *collection) Replace(index int, value any) anytype.List {
 	ego.Delete(index)
 	return ego.Insert(index, value)
 }
@@ -433,7 +422,7 @@ Parameters:
 Returns:
   - updated list (promoted field).
 */
-func (ego *collection) Delete(indexes ...int) list {
+func (ego *collection) Delete(indexes ...int) anytype.List {
 	for index := range indexes {
 		elem := ego.Get(index)
 		if ego.added.Contains(elem) {
@@ -458,7 +447,7 @@ Overrides the method of the promoted field.
 Returns:
   - updated list (promoted field).
 */
-func (ego *collection) Pop() list {
+func (ego *collection) Pop() anytype.List {
 	return ego.Delete(ego.Count() - 1)
 }
 
@@ -469,7 +458,7 @@ Overrides the method of the promoted field.
 Returns:
   - updated list (promoted field).
 */
-func (ego *collection) Clear() list {
+func (ego *collection) Clear() anytype.List {
 	for i := ego.Count() - 1; i >= 0; i-- {
 		ego.Delete(i)
 	}
@@ -482,12 +471,12 @@ Commits all changes to the database.
 Returns:
   - updated list (promoted field).
 */
-func (ego *collection) Commit() list {
+func (ego *collection) Commit() anytype.List {
 
 	// Commiting added elements
 	if !ego.added.Empty() {
 		ego.added.
-			ForEachObject(func(x object) {
+			ForEachObject(func(x anytype.Object) {
 				template := x.(*node).template()
 				result, err := ego.conn.Query(`CREATE (n:`+ego.label+template+`) RETURN elementId(n)`, x)
 				if err != nil {
@@ -507,7 +496,7 @@ func (ego *collection) Commit() list {
 					MATCH (n:`+ego.label+`)
 					WHERE elementId(n) = $id
 					DELETE n
-				`, Object("id", id))
+				`, anytype.NewObject("id", id))
 				if err != nil {
 					panic(err)
 				}
@@ -518,7 +507,7 @@ func (ego *collection) Commit() list {
 	// Commiting modified elements
 	if !ego.modified.Empty() {
 		ego.modified.
-			ForEachObject(func(x object) { x.(*node).Commit() }).
+			ForEachObject(func(x anytype.Object) { x.(*node).Commit() }).
 			Clear()
 	}
 
